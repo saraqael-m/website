@@ -1,0 +1,78 @@
+var canvas;
+var context;
+
+function init() {
+	canvas = document.getElementById('FractalCanvas');
+	context = canvas.getContext('2d');
+	context.fillStyle = 'yellow';
+	context.fillRect(0, 0, 320, 180);
+	colorCanvas(square, square_derivative, [math.complex(-1, 0), math.complex(1, 0)], 50, 0.1, [[-4, -2.25], [4, 2.25]], [[255, 0, 0], [0, 255, 0], [0, 0, 255]]);
+}
+
+function invertColors(data) {
+	for (var i = 0; i < data.length; i += 4) {
+		data[i] = -data[i] + 255 ; // Invert Red
+		data[i + 1] = -data[i+1] + 255; // Invert Green
+		data[i + 2] = -data[i+2] + 255; // Invert Blue
+	}
+}
+
+function resetImg(data) {
+	for (var i = 0; i < data.length; i ++) {
+		data[i] = 0;
+	}
+}
+
+function point_toward_zero(z, f, derivative, zeros, iterations, threshold) {
+	var toward_zero = null
+	for (var i = 0; i < iterations; i++) {
+		z = newtonsMethod(z, f, derivative);
+		for (var zero = 0; zero < zeros.length; zero++) {
+			if (math.abs(math.subtract(zeros[zero], z)) < threshold) {
+				toward_zero = zero;
+				i = iterations;
+				break;
+			}
+		}
+	}
+	return toward_zero;
+}
+
+function newtonsMethod(z, f, derivative) {
+	return math.subtract(z, math.divide(f(z), derivative(z)));
+}
+
+function colorCanvas(f, derivative, zeros, iterations, threshold, corner_coords, colors) {
+	var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+	var coord_diff = [math.abs(corner_coords[1][0] - corner_coords[0][0]), math.abs(corner_coords[1][1] - corner_coords[0][1])];
+	for (var x = 0; x < canvas.width; x++) {
+		for (var y = 0; y < canvas.height; y++) {
+			pos = (x + canvas.width * y) * 4;
+			point = math.complex(corner_coords[0][0] + coord_diff[0] * x / canvas.width, corner_coords[0][1] + coord_diff[1] * y / canvas.height);
+			toward = point_toward_zero(point, f, derivative, zeros, iterations, threshold);
+			console.log(point);
+			if (toward != null) {
+				imageData.data[pos] = colors[toward][0];
+				imageData.data[pos + 1] = colors[toward][1];
+				imageData.data[pos + 2] = colors[toward][2];
+			} else {
+				imageData.data[pos] = 0;
+				imageData.data[pos + 1] = 0;
+				imageData.data[pos + 2] = 0;
+			}
+			imageData.data[pos + 3] = 255;
+		}
+	}
+	console.log(imageData.data);
+	context.putImageData(imageData, 0, 0);
+}
+
+function square(z) {
+	return math.subtract(math.multiply(z, z), 1);
+}
+
+function square_derivative(z) {
+	return math.multiply(2, z);
+}
+
+window.addEventListener('load', init);
